@@ -58,3 +58,23 @@ CREATE INDEX idx_social_accounts_tenant_status
 
 CREATE INDEX idx_automation_tasks_tenant_status_schedule
   ON automation_tasks (tenant_id, status, schedule_at);
+
+CREATE TABLE content_metrics (
+  id            BIGSERIAL PRIMARY KEY,
+  tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  content_id    UUID NOT NULL,
+  content_title VARCHAR(200) NOT NULL,
+  platform      VARCHAR(30) NOT NULL,
+  views         BIGINT NOT NULL DEFAULT 0,
+  likes         BIGINT NOT NULL DEFAULT 0,
+  comments      BIGINT NOT NULL DEFAULT 0,
+  metric_date   DATE NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (tenant_id, content_id, metric_date)
+);
+
+CREATE INDEX idx_content_metrics_tenant_date
+  ON content_metrics (tenant_id, metric_date);
+
+CREATE INDEX idx_content_metrics_views
+  ON content_metrics (tenant_id, views DESC);

@@ -25,6 +25,9 @@ apps/api/
     │   ├── automation/
     │   │   ├── automation.routes.js
     │   │   └── automation.service.js
+    │   ├── analytics/
+    │   │   ├── analytics.routes.js
+    │   │   └── analytics.service.js
     │   ├── queue/
     │   │   ├── queue.js
     │   │   ├── queue.setup.js
@@ -61,6 +64,10 @@ apps/api/
   - Supported actions: `like`, `comment`, `follow`, `post`
   - Optional fields: `scheduleAt`, `priority`, `metadata`
 
+### Analytics Module
+- `GET /api/v1/analytics/summary?from=YYYY-MM-DD&to=YYYY-MM-DD` — get total views and total likes (date-filtered).
+- `GET /api/v1/analytics/fyp?from=YYYY-MM-DD&to=YYYY-MM-DD&minViews=10000` — get FYP content (views above threshold).
+
 ### System
 - `GET /health` — health probe endpoint.
 
@@ -86,10 +93,13 @@ Tables included:
 - `users`
 - `social_accounts`
 - `automation_tasks`
+- `content_metrics`
 
 Indexes included:
 - `idx_social_accounts_tenant_status`
 - `idx_automation_tasks_tenant_status_schedule`
+- `idx_content_metrics_tenant_date`
+- `idx_content_metrics_views`
 
 ## Bot Automation
 
