@@ -478,3 +478,5 @@ See implementation details and endpoint catalog in:
 - `docs/amoref-express-backend.md`
 - `docs/queue-based-automation.md`
 - `docs/puppeteer-instagram-bot.md`
+
+- `docs/react-dashboard.md`
