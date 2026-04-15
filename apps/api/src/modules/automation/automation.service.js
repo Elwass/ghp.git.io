@@ -1,5 +1,6 @@
 import { db } from '../../db/pool.js';
 import { enqueueAutomationTask } from '../queue/queue.js';
+import { logger } from '../../utils/logger.js';
 
 export async function createAutomationTask(tenantId, createdBy, payload) {
   const result = await db.query(
@@ -32,25 +33,28 @@ export async function createAutomationTask(tenantId, createdBy, payload) {
   );
 
   const task = result.rows[0];
+  const delayMs = payload.scheduleAt
+    ? Math.max(new Date(payload.scheduleAt).getTime() - Date.now(), 0)
+    : 0;
 
-  await enqueueAutomationTask(
-    `automation.${task.action_type}`,
-    {
-      taskId: task.id,
-      tenantId: task.tenant_id,
-      socialAccountId: task.social_account_id,
-      actionType: task.action_type,
-      target: task.target,
-      commentText: task.comment_text,
-      metadata: task.metadata
-    },
-    {
-      delay: payload.scheduleAt
-        ? Math.max(new Date(payload.scheduleAt).getTime() - Date.now(), 0)
-        : 0,
-      jobId: `task:${task.id}`
-    }
-  );
+  await enqueueAutomationTask({
+    taskId: task.id,
+    tenantId: task.tenant_id,
+    socialAccountId: task.social_account_id,
+    actionType: task.action_type,
+    target: task.target,
+    commentText: task.comment_text,
+    metadata: task.metadata,
+    delayMs,
+    priority: payload.priority
+  });
+
+  logger.info('Automation task queued', {
+    taskId: task.id,
+    tenantId: task.tenant_id,
+    actionType: task.action_type,
+    delayMs
+  });
 
   return task;
 }

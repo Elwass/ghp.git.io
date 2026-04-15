@@ -476,3 +476,4 @@ A concrete Node.js + Express backend scaffold is included under `apps/api` with:
 
 See implementation details and endpoint catalog in:
 - `docs/amoref-express-backend.md`
+- `docs/queue-based-automation.md`

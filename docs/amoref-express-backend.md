@@ -27,10 +27,13 @@ apps/api/
     │   │   └── automation.service.js
     │   └── queue/
     │       ├── queue.js
+    │       ├── queue.setup.js
+    │       ├── job.processor.js
     │       └── workers/
     │           └── automation.worker.js
     └── utils/
-        └── http-error.js
+        ├── http-error.js
+        └── logger.js
 ```
 
 ## REST API Endpoints
@@ -46,7 +49,9 @@ apps/api/
 
 ### Automation Task Module
 - `GET /api/v1/automation/tasks` — list automation tasks for tenant.
-- `POST /api/v1/automation/tasks` — create automation task (`like`, `comment`, `follow`) and enqueue to BullMQ.
+- `POST /api/v1/automation/tasks` — create automation task and enqueue to BullMQ.
+  - Supported actions: `like`, `comment`, `follow`, `post`
+  - Optional fields: `scheduleAt`, `priority`, `metadata`
 
 ### System
 - `GET /health` — health probe endpoint.
@@ -54,12 +59,13 @@ apps/api/
 ## Queue System (BullMQ)
 
 - Queue name: `automation.tasks`
-- Producer: `modules/queue/queue.js`
+- Queue setup: `modules/queue/queue.setup.js`
 - Worker: `modules/queue/workers/automation.worker.js`
-- Processing strategy:
+- Job processor: `modules/queue/job.processor.js`
+- Behavior:
   - Retries with exponential backoff
   - Delayed jobs for scheduled automation
-  - `jobId` idempotency (`task:<taskId>`)
+  - Structured logging for queue and worker events
 
 ## PostgreSQL Schema
 

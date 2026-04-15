@@ -1,43 +1,44 @@
 import { Worker } from 'bullmq';
-import { connection } from '../queue.js';
-import { db } from '../../../db/pool.js';
+import { queueConnection } from '../queue.setup.js';
+import { processAutomationJob } from '../job.processor.js';
+import { logger } from '../../../utils/logger.js';
 
-const worker = new Worker(
+export const automationWorker = new Worker(
   'automation.tasks',
   async (job) => {
-    const { taskId } = job.data;
+    logger.info('Worker received job', {
+      queue: 'automation.tasks',
+      jobId: job.id,
+      actionType: job.data?.actionType,
+      attemptsMade: job.attemptsMade
+    });
 
-    await db.query(
-      `UPDATE automation_tasks SET status = 'processing', updated_at = NOW() WHERE id = $1`,
-      [taskId]
-    );
-
-    // TODO: Replace with Puppeteer bot execution logic.
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    await db.query(
-      `UPDATE automation_tasks SET status = 'completed', updated_at = NOW(), completed_at = NOW() WHERE id = $1`,
-      [taskId]
-    );
+    await processAutomationJob(job);
   },
-  { connection, concurrency: 20 }
+  {
+    connection: queueConnection,
+    concurrency: 25
+  }
 );
 
-worker.on('failed', async (job, error) => {
-  if (!job?.data?.taskId) {
-    return;
-  }
-
-  await db.query(
-    `
-    UPDATE automation_tasks
-    SET status = 'failed',
-        updated_at = NOW(),
-        last_error = $2
-    WHERE id = $1
-    `,
-    [job.data.taskId, error.message]
-  );
+automationWorker.on('completed', (job) => {
+  logger.info('Worker marked job completed', {
+    queue: 'automation.tasks',
+    jobId: job.id,
+    actionType: job.data?.actionType
+  });
 });
 
-console.log('Automation worker started...');
+automationWorker.on('failed', (job, error) => {
+  logger.error('Worker failed job', {
+    queue: 'automation.tasks',
+    jobId: job?.id,
+    actionType: job?.data?.actionType,
+    attemptsMade: job?.attemptsMade,
+    attemptsTotal: job?.opts?.attempts,
+    willRetry: (job?.attemptsMade ?? 0) < (job?.opts?.attempts ?? 0),
+    error: error.message
+  });
+});
+
+logger.info('Automation worker started', { queue: 'automation.tasks' });

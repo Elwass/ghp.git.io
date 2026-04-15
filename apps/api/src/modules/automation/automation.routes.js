@@ -7,11 +7,12 @@ import {
 
 const createTaskSchema = z.object({
   socialAccountId: z.string().uuid(),
-  actionType: z.enum(['like', 'comment', 'follow']),
+  actionType: z.enum(['like', 'comment', 'follow', 'post']),
   target: z.string().min(1),
   commentText: z.string().optional(),
   scheduleAt: z.string().datetime().optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.any()).optional(),
+  priority: z.number().int().min(1).max(10).optional()
 });
 
 export const automationRouter = Router();
