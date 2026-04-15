@@ -25,12 +25,20 @@ apps/api/
     │   ├── automation/
     │   │   ├── automation.routes.js
     │   │   └── automation.service.js
-    │   └── queue/
-    │       ├── queue.js
-    │       ├── queue.setup.js
-    │       ├── job.processor.js
-    │       └── workers/
-    │           └── automation.worker.js
+    │   ├── queue/
+    │   │   ├── queue.js
+    │   │   ├── queue.setup.js
+    │   │   ├── job.processor.js
+    │   │   └── workers/
+    │   │       └── automation.worker.js
+    │   └── bot/
+    │       ├── run-instagram-bot.js
+    │       └── instagram/
+    │           ├── browser-session.js
+    │           ├── comment-generator.js
+    │           ├── index.js
+    │           ├── instagram.bot.js
+    │           └── selectors.js
     └── utils/
         ├── http-error.js
         └── logger.js
@@ -82,3 +90,7 @@ Tables included:
 Indexes included:
 - `idx_social_accounts_tenant_status`
 - `idx_automation_tasks_tenant_status_schedule`
+
+## Bot Automation
+
+- Instagram Puppeteer bot documentation: `docs/puppeteer-instagram-bot.md`
