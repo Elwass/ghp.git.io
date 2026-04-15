@@ -54,12 +54,12 @@ apps/api/
 - `POST /api/v1/auth/login` — login and return JWT.
 
 ### Account Management Module
-- `GET /api/v1/accounts` — list all social accounts for authenticated tenant.
+- `GET /api/v1/accounts?limit=100&offset=0` — paginated social account list for authenticated tenant.
 - `POST /api/v1/accounts` — create social account.
 - `PATCH /api/v1/accounts/:id/status` — update account status (`active`, `paused`, `banned`).
 
 ### Automation Task Module
-- `GET /api/v1/automation/tasks` — list automation tasks for tenant.
+- `GET /api/v1/automation/tasks?limit=50&offset=0` — paginated automation task list for tenant.
 - `POST /api/v1/automation/tasks` — create automation task and enqueue to BullMQ.
   - Supported actions: `like`, `comment`, `follow`, `post`
   - Optional fields: `scheduleAt`, `priority`, `metadata`
@@ -80,7 +80,9 @@ apps/api/
 - Behavior:
   - Retries with exponential backoff
   - Delayed jobs for scheduled automation
+  - Queue sharding for throughput (`automation.tasks.0..N`)
   - Structured logging for queue and worker events
+  - Worker rate limiting controls for platform safety
 
 ## PostgreSQL Schema
 
@@ -97,10 +99,16 @@ Tables included:
 
 Indexes included:
 - `idx_social_accounts_tenant_status`
-- `idx_automation_tasks_tenant_status_schedule`
+- `idx_automation_tasks_dispatch`
+- `idx_automation_tasks_account_time`
 - `idx_content_metrics_tenant_date`
 - `idx_content_metrics_views`
 
 ## Bot Automation
 
 - Instagram Puppeteer bot documentation: `docs/puppeteer-instagram-bot.md`
+
+
+## Scalability
+
+- See `docs/scalability-refactor.md` for 300-account / 10,000-daily-task tuning details.

@@ -44,8 +44,13 @@ CREATE TABLE automation_tasks (
   target            VARCHAR(255) NOT NULL,
   comment_text      TEXT,
   schedule_at       TIMESTAMPTZ,
+  run_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  queue_name        VARCHAR(80),
+  priority          SMALLINT NOT NULL DEFAULT 3,
+  attempts          SMALLINT NOT NULL DEFAULT 0,
   status            VARCHAR(20) NOT NULL DEFAULT 'queued',
   created_by        UUID REFERENCES users(id),
+  processed_by      VARCHAR(80),
   metadata          JSONB NOT NULL DEFAULT '{}'::jsonb,
   last_error        TEXT,
   completed_at      TIMESTAMPTZ,
@@ -56,8 +61,11 @@ CREATE TABLE automation_tasks (
 CREATE INDEX idx_social_accounts_tenant_status
   ON social_accounts (tenant_id, status);
 
-CREATE INDEX idx_automation_tasks_tenant_status_schedule
-  ON automation_tasks (tenant_id, status, schedule_at);
+CREATE INDEX idx_automation_tasks_dispatch
+  ON automation_tasks (tenant_id, status, run_at, priority);
+
+CREATE INDEX idx_automation_tasks_account_time
+  ON automation_tasks (social_account_id, created_at DESC);
 
 CREATE TABLE content_metrics (
   id            BIGSERIAL PRIMARY KEY,

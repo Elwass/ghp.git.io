@@ -17,12 +17,18 @@ const patchStatusSchema = z.object({
   status: z.enum(['active', 'paused', 'banned'])
 });
 
+const listQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(300).optional(),
+  offset: z.coerce.number().int().min(0).optional()
+});
+
 export const accountsRouter = Router();
 
 accountsRouter.get('/', async (req, res, next) => {
   try {
-    const rows = await listAccounts(req.user.tenantId);
-    return res.json({ data: rows });
+    const query = listQuerySchema.parse(req.query);
+    const rows = await listAccounts(req.user.tenantId, query);
+    return res.json({ data: rows, pagination: query });
   } catch (error) {
     return next(error);
   }

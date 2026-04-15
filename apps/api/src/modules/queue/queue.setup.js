@@ -6,38 +6,67 @@ export const queueConnection = {
   url: env.redisUrl
 };
 
-export const automationQueue = new Queue('automation.tasks', {
-  connection: queueConnection,
-  defaultJobOptions: {
-    attempts: 5,
-    backoff: { type: 'exponential', delay: 2000 },
-    removeOnComplete: 200,
-    removeOnFail: 1000
+const SHARD_COUNT = Math.max(env.queueShards, 1);
+
+function simpleHash(input) {
+  let hash = 0;
+
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0;
   }
-});
 
-export const automationQueueEvents = new QueueEvents('automation.tasks', {
-  connection: queueConnection
-});
+  return Math.abs(hash);
+}
 
-automationQueueEvents.on('completed', ({ jobId }) => {
-  logger.info('Automation task completed', { jobId, queue: 'automation.tasks' });
-});
+function queueNameForShard(shard) {
+  return `automation.tasks.${shard}`;
+}
 
-automationQueueEvents.on('failed', ({ jobId, failedReason }) => {
-  logger.error('Automation task failed', {
-    jobId,
-    queue: 'automation.tasks',
-    failedReason
+export function resolveQueueName(socialAccountId) {
+  const shard = simpleHash(String(socialAccountId)) % SHARD_COUNT;
+  return queueNameForShard(shard);
+}
+
+export const automationQueues = Array.from({ length: SHARD_COUNT }, (_, shard) => {
+  const name = queueNameForShard(shard);
+  return new Queue(name, {
+    connection: queueConnection,
+    defaultJobOptions: {
+      attempts: 6,
+      backoff: { type: 'exponential', delay: 2000 },
+      removeOnComplete: 500,
+      removeOnFail: 2000
+    }
   });
 });
 
-export async function addAutomationTask(payload) {
-  const jobName = `automation.${payload.actionType}`;
+export const automationQueueEvents = automationQueues.map((queue) => {
+  const events = new QueueEvents(queue.name, { connection: queueConnection });
 
-  return automationQueue.add(jobName, payload, {
+  events.on('completed', ({ jobId }) => {
+    logger.info('Automation task completed', { queue: queue.name, jobId });
+  });
+
+  events.on('failed', ({ jobId, failedReason }) => {
+    logger.error('Automation task failed', {
+      queue: queue.name,
+      jobId,
+      failedReason
+    });
+  });
+
+  return events;
+});
+
+export async function addAutomationTask(payload) {
+  const queueName = payload.queueName || resolveQueueName(payload.socialAccountId);
+  const queue = automationQueues.find((item) => item.name === queueName) || automationQueues[0];
+
+  return queue.add(`automation.${payload.actionType}`, payload, {
     jobId: payload.taskId,
     delay: payload.delayMs ?? 0,
-    priority: payload.priority ?? 3
+    priority: payload.priority ?? 3,
+    attempts: payload.attempts ?? 6
   });
 }

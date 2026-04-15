@@ -5,11 +5,13 @@
 File: `apps/api/src/modules/queue/queue.setup.js`
 
 - Defines Redis connection via `REDIS_URL`.
-- Creates `automation.tasks` queue with default retry policy:
-  - `attempts: 5`
+- Creates sharded queues: `automation.tasks.0` ... `automation.tasks.N`.
+- Uses hash-based queue assignment from `socialAccountId`.
+- Sets default retry policy:
+  - `attempts: 6`
   - exponential backoff with 2s base delay
 - Adds queue event listeners for completed/failed events.
-- Exposes `addAutomationTask(payload)` to enqueue supported task types:
+- Enqueues supported task types:
   - `like`
   - `comment`
   - `follow`
@@ -19,29 +21,28 @@ File: `apps/api/src/modules/queue/queue.setup.js`
 
 File: `apps/api/src/modules/queue/workers/automation.worker.js`
 
-- Starts a BullMQ worker for `automation.tasks`.
-- Configures `concurrency: 25`.
+- Starts one worker per queue shard.
+- Configures environment-driven throughput controls:
+  - `WORKER_CONCURRENCY`
+  - `WORKER_RATE_LIMIT_MAX`
+  - `WORKER_RATE_LIMIT_DURATION_MS`
 - Delegates business logic to job processor.
-- Logs worker lifecycle:
-  - job received
-  - job completed
-  - job failed (+ retry visibility via `willRetry`)
+- Logs worker lifecycle and retry behavior.
 
 ## Job Processor
 
 File: `apps/api/src/modules/queue/job.processor.js`
 
-- Maps `actionType` to concrete handlers (`like`, `comment`, `follow`, `post`).
-- Marks tasks in PostgreSQL through states:
+- Maps `actionType` to handlers (`like`, `comment`, `follow`, `post`).
+- Marks task states in PostgreSQL:
   - `processing`
   - `completed`
   - `failed`
-- Persists `last_error` when processing fails.
+- Uses PostgreSQL advisory lock per `socialAccountId` to avoid conflicting concurrent actions.
+- Persists `last_error`, attempts, and processor metadata.
 - Throws errors back to BullMQ so retry policy applies automatically.
 
 ## API Integration
 
-- `POST /api/v1/automation/tasks` accepts task creation payload and enqueues jobs.
-- Supported `actionType`: `like`, `comment`, `follow`, `post`.
-- Optional `scheduleAt` for delayed execution.
-- Optional `priority` (1..10).
+- `POST /api/v1/automation/tasks` creates and enqueues jobs.
+- `GET /api/v1/automation/tasks?limit=50&offset=0` lists tasks with pagination.

@@ -480,3 +480,4 @@ See implementation details and endpoint catalog in:
 - `docs/puppeteer-instagram-bot.md`
 
 - `docs/react-dashboard.md`
+- `docs/scalability-refactor.md`

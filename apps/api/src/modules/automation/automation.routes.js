@@ -15,12 +15,18 @@ const createTaskSchema = z.object({
   priority: z.number().int().min(1).max(10).optional()
 });
 
+const listQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional()
+});
+
 export const automationRouter = Router();
 
 automationRouter.get('/tasks', async (req, res, next) => {
   try {
-    const rows = await listAutomationTasks(req.user.tenantId);
-    return res.json({ data: rows });
+    const query = listQuerySchema.parse(req.query);
+    const rows = await listAutomationTasks(req.user.tenantId, query);
+    return res.json({ data: rows, pagination: query });
   } catch (error) {
     return next(error);
   }

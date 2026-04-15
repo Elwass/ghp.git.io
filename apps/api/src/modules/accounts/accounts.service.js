@@ -1,14 +1,18 @@
 import { db } from '../../db/pool.js';
 
-export async function listAccounts(tenantId) {
+export async function listAccounts(tenantId, options = {}) {
+  const limit = Math.min(Number(options.limit || 100), 300);
+  const offset = Math.max(Number(options.offset || 0), 0);
+
   const result = await db.query(
     `
     SELECT id, platform, handle, login_username, status, created_at
     FROM social_accounts
     WHERE tenant_id = $1
     ORDER BY created_at DESC
+    LIMIT $2 OFFSET $3
     `,
-    [tenantId]
+    [tenantId, limit, offset]
   );
 
   return result.rows;

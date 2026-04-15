@@ -1,5 +1,6 @@
 export {
   addAutomationTask as enqueueAutomationTask,
-  automationQueue,
-  queueConnection as connection
+  automationQueues,
+  queueConnection as connection,
+  resolveQueueName
 } from './queue.setup.js';
