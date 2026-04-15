@@ -1,0 +1,96 @@
+# AMOREF Express Backend Blueprint
+
+## Folder Structure
+
+```txt
+apps/api/
+├── package.json
+└── src/
+    ├── app.js
+    ├── server.js
+    ├── config/
+    │   └── env.js
+    ├── db/
+    │   ├── pool.js
+    │   └── schema.sql
+    ├── middleware/
+    │   └── authenticate.js
+    ├── modules/
+    │   ├── auth/
+    │   │   ├── auth.routes.js
+    │   │   └── auth.service.js
+    │   ├── accounts/
+    │   │   ├── accounts.routes.js
+    │   │   └── accounts.service.js
+    │   ├── automation/
+    │   │   ├── automation.routes.js
+    │   │   └── automation.service.js
+    │   ├── queue/
+    │   │   ├── queue.js
+    │   │   ├── queue.setup.js
+    │   │   ├── job.processor.js
+    │   │   └── workers/
+    │   │       └── automation.worker.js
+    │   └── bot/
+    │       ├── run-instagram-bot.js
+    │       └── instagram/
+    │           ├── browser-session.js
+    │           ├── comment-generator.js
+    │           ├── index.js
+    │           ├── instagram.bot.js
+    │           └── selectors.js
+    └── utils/
+        ├── http-error.js
+        └── logger.js
+```
+
+## REST API Endpoints
+
+### Auth Module
+- `POST /api/v1/auth/register` — register user and return JWT.
+- `POST /api/v1/auth/login` — login and return JWT.
+
+### Account Management Module
+- `GET /api/v1/accounts` — list all social accounts for authenticated tenant.
+- `POST /api/v1/accounts` — create social account.
+- `PATCH /api/v1/accounts/:id/status` — update account status (`active`, `paused`, `banned`).
+
+### Automation Task Module
+- `GET /api/v1/automation/tasks` — list automation tasks for tenant.
+- `POST /api/v1/automation/tasks` — create automation task and enqueue to BullMQ.
+  - Supported actions: `like`, `comment`, `follow`, `post`
+  - Optional fields: `scheduleAt`, `priority`, `metadata`
+
+### System
+- `GET /health` — health probe endpoint.
+
+## Queue System (BullMQ)
+
+- Queue name: `automation.tasks`
+- Queue setup: `modules/queue/queue.setup.js`
+- Worker: `modules/queue/workers/automation.worker.js`
+- Job processor: `modules/queue/job.processor.js`
+- Behavior:
+  - Retries with exponential backoff
+  - Delayed jobs for scheduled automation
+  - Structured logging for queue and worker events
+
+## PostgreSQL Schema
+
+The canonical schema is defined at:
+
+- `apps/api/src/db/schema.sql`
+
+Tables included:
+- `tenants`
+- `users`
+- `social_accounts`
+- `automation_tasks`
+
+Indexes included:
+- `idx_social_accounts_tenant_status`
+- `idx_automation_tasks_tenant_status_schedule`
+
+## Bot Automation
+
+- Instagram Puppeteer bot documentation: `docs/puppeteer-instagram-bot.md`
