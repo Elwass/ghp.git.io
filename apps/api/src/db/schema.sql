@@ -1,0 +1,60 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE tenants (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name          VARCHAR(120) NOT NULL,
+  plan          VARCHAR(40) NOT NULL DEFAULT 'starter',
+  status        VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE users (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  email         VARCHAR(160) NOT NULL,
+  password_hash TEXT NOT NULL,
+  full_name     VARCHAR(120),
+  role          VARCHAR(30) NOT NULL DEFAULT 'member',
+  status        VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (tenant_id, email)
+);
+
+CREATE TABLE social_accounts (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id          UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  platform           VARCHAR(30) NOT NULL,
+  handle             VARCHAR(120) NOT NULL,
+  login_username     VARCHAR(160) NOT NULL,
+  login_password_enc TEXT NOT NULL,
+  status             VARCHAR(20) NOT NULL DEFAULT 'active',
+  last_active_at     TIMESTAMPTZ,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (tenant_id, platform, handle)
+);
+
+CREATE TABLE automation_tasks (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id         UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  social_account_id UUID NOT NULL REFERENCES social_accounts(id) ON DELETE CASCADE,
+  action_type       VARCHAR(20) NOT NULL,
+  target            VARCHAR(255) NOT NULL,
+  comment_text      TEXT,
+  schedule_at       TIMESTAMPTZ,
+  status            VARCHAR(20) NOT NULL DEFAULT 'queued',
+  created_by        UUID REFERENCES users(id),
+  metadata          JSONB NOT NULL DEFAULT '{}'::jsonb,
+  last_error        TEXT,
+  completed_at      TIMESTAMPTZ,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_social_accounts_tenant_status
+  ON social_accounts (tenant_id, status);
+
+CREATE INDEX idx_automation_tasks_tenant_status_schedule
+  ON automation_tasks (tenant_id, status, schedule_at);
