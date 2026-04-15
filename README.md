@@ -463,3 +463,16 @@ Recommended controls:
 - Keep Puppeteer browser instances warm in bounded pools to reduce startup latency.
 
 This architecture is designed to be incrementally deployable: monorepo first, then split services as throughput increases.
+
+---
+
+## Express Backend Starter (Implemented)
+
+A concrete Node.js + Express backend scaffold is included under `apps/api` with:
+- Auth module
+- Account management module
+- Automation task module
+- BullMQ queue system
+
+See implementation details and endpoint catalog in:
+- `docs/amoref-express-backend.md`
